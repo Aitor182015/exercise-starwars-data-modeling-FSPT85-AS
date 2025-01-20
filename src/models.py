@@ -1,32 +1,72 @@
 import os
 import sys
-from sqlalchemy import Column, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy import Integer, String, ForeignKey
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy import create_engine
 from eralchemy2 import render_er
+from sqlalchemy.orm import mapped_column
 
 Base = declarative_base()
 
-class Person(Base):
-    __tablename__ = 'person'
-    # Here we define columns for the table person
-    # Notice that each column is also a normal Python instance attribute.
-    id = Column(Integer, primary_key=True)
-    name = Column(String(250), nullable=False)
+# Tabla Usuario
+class Usuario(Base):
+    __tablename__ = 'usuario'
 
-class Address(Base):
-    __tablename__ = 'address'
-    # Here we define columns for the table address.
-    # Notice that each column is also a normal Python instance attribute.
-    id = Column(Integer, primary_key=True)
-    street_name = Column(String(250))
-    street_number = Column(String(250))
-    post_code = Column(String(250), nullable=False)
-    person_id = Column(Integer, ForeignKey('person.id'))
-    person = relationship(Person)
+    id = mapped_column(Integer, primary_key=True)
+    email = mapped_column(String(120), unique=True, nullable=False)
+    password = mapped_column(String(80), nullable=False)
+    nombre = mapped_column(String(80), nullable=False)
+    apellido = mapped_column(String(80), nullable=False)
 
-    def to_dict(self):
-        return {}
+    favoritos = relationship('Favorito', back_populates='usuario')  #back_populates conecta bidireccionalmente la tabla favoritos con el usuario en est caso
 
-## Draw from SQLAlchemy base
-render_er(Base, 'diagram.png')
+# Tabla Planeta
+class Planeta(Base):
+    __tablename__ = 'planeta'
+
+    id = mapped_column(Integer, primary_key=True)
+    nombre = mapped_column(String(120), unique=True, nullable=False)
+    clima = mapped_column(String(80))
+    terreno = mapped_column(String(80))
+    poblacion = mapped_column(String(80))
+
+    favoritos = relationship('Favorito', back_populates='planeta')
+
+# Tabla Personaje
+class Personaje(Base):
+    __tablename__ = 'personaje'
+
+    id = mapped_column(Integer, primary_key=True)
+    nombre = mapped_column(String(120), unique=True, nullable=False)
+    especie = mapped_column(String(80))
+    genero = mapped_column(String(80))
+    altura = mapped_column(String(80))
+
+    favoritos = relationship('Favorito', back_populates='personaje')
+
+# Tabla Favorito (intermedia)
+class Favorito(Base):
+    __tablename__ = 'favorito'
+    #foreign_key hace que esta tabla dependa del resto, no puedes tener un favorito de una id que no exista x ejemplo
+    id = mapped_column(Integer, primary_key=True)
+    usuario_id = mapped_column(Integer, ForeignKey('usuario.id'))
+    planeta_id = mapped_column(Integer, ForeignKey('planeta.id'), nullable=True)
+    personaje_id = mapped_column(Integer, ForeignKey('personaje.id'), nullable=True)
+
+    usuario = relationship('Usuario', back_populates='favoritos')
+    planeta = relationship('Planeta', back_populates='favoritos')
+    personaje = relationship('Personaje', back_populates='favoritos')
+
+# Generar el diagrama
+def generate_schema_diagram():
+    from eralchemy2 import render_er
+    render_er('sqlite:///database.db', 'diagram.png')
+
+if __name__ == "__main__":
+    # Crear el esquema de la base de datos
+    from sqlalchemy import create_engine
+    engine = create_engine('sqlite:///database.db')
+    Base.metadata.create_all(engine)
+
+    # Generar el diagrama
+    generate_schema_diagram()
